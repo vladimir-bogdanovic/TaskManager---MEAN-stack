@@ -17,6 +17,7 @@ export class NewListComponent {
     this.taskService
       .createList(this.inputValue)
       .subscribe((list: ListInterface) => {
+        console.log(list);
         this.router.navigate(['/lists', list._id]);
       });
   }

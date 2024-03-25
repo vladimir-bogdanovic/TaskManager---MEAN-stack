@@ -10,8 +10,8 @@ import { TaskService } from 'src/app/services/task.service';
   styleUrls: ['./task-view.component.scss'],
 })
 export class TaskViewComponent implements OnInit {
-  lists!: any;
-  tasks!: any;
+  lists!: ListInterface[];
+  tasks!: TaskInterface[];
 
   constructor(
     private route: ActivatedRoute,
@@ -19,16 +19,23 @@ export class TaskViewComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.taskService.getLists().subscribe((lists: ListInterface) => {
+    this.taskService.getLists().subscribe((lists: ListInterface[]) => {
       this.lists = lists;
     });
 
     this.route.params.subscribe((params: Params) => {
       this.taskService
         .getTasks(params?.['listId'])
-        .subscribe((tasks: TaskInterface) => {
+        .subscribe((tasks: TaskInterface[]) => {
           this.tasks = tasks;
         });
+    });
+  }
+
+  onTaskClick(task: TaskInterface) {
+    this.taskService.completeTask(task).subscribe(() => {
+      console.log('task is complete');
+      task.completed = !task.completed;
     });
   }
 }

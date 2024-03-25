@@ -21,7 +21,14 @@
     <div class="tasks-list-container has-background-light">
       <h1 class="title has-text-primary">Tasks</h1>
 
-      <div class="task" *ngFor="let task of tasks">{{ task.title }}</div>
+      <div
+        class="task"
+        *ngFor="let task of tasks"
+        (click)="onTaskClick(task)"
+        [ngClass]="{ completed: task.completed }"
+      >
+        {{ task.title }}
+      </div>
 
       <button
         routerLink="./new-task"

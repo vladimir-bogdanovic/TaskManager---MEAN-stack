@@ -1,29 +1,46 @@
 import { Injectable } from '@angular/core';
-import { WebRequestService } from './web-request.service';
 import { Observable } from 'rxjs';
 import { ListInterface } from '../models/list-model';
+import { HttpClient } from '@angular/common/http';
+import { TaskInterface } from '../models/task-model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TaskService {
-  constructor(private webRequest: WebRequestService) {}
+  baseUrl = 'http://localhost:3000';
 
-  createList(listName: string) {
-    return this.webRequest.post('lists', { title: listName });
-  }
+  constructor(private http: HttpClient) {}
 
-  createTask(listId: string, taskName: string) {
-    return this.webRequest.post(`lists/${listId}/tasks`, {
-      title: taskName,
+  createList(listName: string): Observable<ListInterface> {
+    return this.http.post<ListInterface>(`${this.baseUrl}/lists`, {
+      title: listName,
     });
   }
 
-  getLists() {
-    return this.webRequest.get('lists');
+  createTask(listId: string, newTask: string): Observable<TaskInterface> {
+    return this.http.post<TaskInterface>(
+      `${this.baseUrl}/lists/${listId}/tasks`,
+      {
+        title: newTask,
+      }
+    );
   }
 
-  getTasks(listId: string) {
-    return this.webRequest.get(`lists/${listId}/tasks`);
+  getLists(): Observable<ListInterface[]> {
+    return this.http.get<ListInterface[]>('http://localhost:3000/lists');
+  }
+
+  getTasks(listId: string): Observable<TaskInterface[]> {
+    return this.http.get<TaskInterface[]>(
+      `${this.baseUrl}/lists/${listId}/tasks`
+    );
+  }
+
+  completeTask(task: TaskInterface): Observable<TaskInterface> {
+    return this.http.patch<TaskInterface>(
+      `${this.baseUrl}/lists/${task._listId}/tasks/${task._id}`,
+      { completed: !task.completed }
+    );
   }
 }
