@@ -12,6 +12,7 @@ const jwtSecret = "51778657246321226641fsdklafjasdkljfsklfjd7148924065";
 const List = require("./db/models/list.model");
 const Task = require("./db/models/task.model");
 const { User } = require("./db/models/user.model");
+const { trusted } = require("mongoose");
 
 // enable cors
 app.use(function (req, res, next) {
@@ -47,46 +48,56 @@ let authenticate = (req, res, next) => {
 };
 
 let verifySession = (req, res, next) => {
-  let _id = req.header("_id");
   let refreshToken = req.header("x-refresh-token");
+  let _id = req.header("_id");
 
-  User.findByIdAndToken(_id, refreshToken).then((user) => {
-    if (!user) {
-      return Promise.reject({
-        error:
-          "User not found. Make sure that the refresh token and user id are correct",
-      });
-    }
+  User.findByIdAndToken(_id, refreshToken)
+    .then((user) => {
+      if (!user) {
+        return Promise.reject({
+          error:
+            "User not found. Make sure that the refresh token and user id are correct",
+        });
+      }
 
-    req.user_id = user._id;
-    req.userObject = user;
-    req.refreshToken = refreshToken;
+      // if the code reaches here - the user was found
+      // therefore the refresh token exists in the database - but we still have to check if it has expired or not
 
-    user.sessions
-      .forEach((session) => {
-        if (
-          session.token === refreshToken &&
-          User.hasRefreshTokenExpired() === false
-        ) {
-          next();
-        } else {
-          return Promise.reject({
-            error: "Refresh token has expired or the session is invalid",
-          });
+      req.user_id = user._id;
+      req.userObject = user;
+      req.refreshToken = refreshToken;
+
+      let isSessionValid = false;
+
+      user.sessions.forEach((session) => {
+        if (session.token === refreshToken) {
+          // check if the session has expired
+          if (User.hasRefreshTokenExpired(session.expiresAt) === false) {
+            // refresh token has not expired
+            isSessionValid = true;
+          }
         }
-      })
-      .catch((err) => {
-        res.status(401).send(err);
       });
-  });
+
+      if (isSessionValid) {
+        next();
+      } else {
+        return Promise.reject({
+          error: "Refresh token has expired or the session is invalid",
+        });
+      }
+    })
+    .catch((e) => {
+      res.status(401).send(e);
+    });
 };
 
 // LIST ROUTES  //////////////////////////////////////////////
 
 // GET
-app.get("/lists", (req, res) => {
+app.get("/lists", authenticate, (req, res) => {
   List.find({
-    //   _userId: req.user_id,
+    _userId: req.user_id,
   })
     .then((lists) => {
       res.send(lists);
@@ -98,55 +109,38 @@ app.get("/lists", (req, res) => {
 });
 
 // POST
-app.post("/lists", (req, res) => {
+app.post("/lists", authenticate, (req, res) => {
   let title = req.body.title;
 
   let newList = new List({
     title,
+    _userId: req.user_id,
   });
-  newList
-    .save()
-    .then((listDoc) => {
-      res.send(listDoc);
-      res.send(console.log(title, newList));
-    })
-    .catch((error) => {
-      console.error("Error saving list:", error);
-      res.status(500).send("An error occurred while saving the list.");
-    });
+  newList.save().then((listDoc) => {
+    res.send(listDoc);
+    res.send(console.log(title, newList));
+  });
 });
 
 // UPDATE
-app.patch("/lists/:id", (req, res) => {
-  const listId = req.params.id;
-  const update = req.body;
 
-  List.findById(listId)
-    .then((list) => {
-      if (!list) {
-        return res.status(404).json({ error: "List not found" });
-      }
-      Object.assign(list, update);
-      return list.save();
-    })
-    .then((updateList) => {
-      res.json(updateList);
-    })
-    .catch((error) => {
-      // Handle errors
-      console.error("Error updating list:", error);
-      res
-        .status(500)
-        .json({ error: "An error occurred while updating the list" });
-    });
+app.patch("/lists/:id", authenticate, (req, res) => {
+  List.findOneAndUpdate(
+    { _id: req.params.id, _userId: req.user_id },
+    {
+      $set: req.body,
+    }
+  ).then(() => {
+    res.send({ message: "updated successfully" });
+  });
 });
 
 //  DELETE
 
-app.delete("/lists/:id", (req, res) => {
-  // We want to delete the specified list (document with id in the URL)
+app.delete("/lists/:id", authenticate, (req, res) => {
   List.findOneAndDelete({
     _id: req.params.id,
+    _userId: req.user_id,
   }).then((removedListDoc) => {
     res.send(removedListDoc);
 
@@ -158,7 +152,7 @@ app.delete("/lists/:id", (req, res) => {
 // TASK ROUTES  //////////////////////////////////////////////
 
 //GET
-app.get("/lists/:listId/tasks", (req, res) => {
+app.get("/lists/:listId/tasks", authenticate, (req, res) => {
   Task.find({ _listId: req.params.listId })
     .then((tasks) => {
       res.send(tasks);
@@ -169,40 +163,94 @@ app.get("/lists/:listId/tasks", (req, res) => {
 });
 
 //POST
-app.post("/lists/:listId/tasks", (req, res) => {
-  let newTask = new Task({
-    title: req.body.title,
-    _listId: req.params.listId,
-  });
+app.post("/lists/:listId/tasks", authenticate, (req, res) => {
+  List.findOne({
+    _id: req.params.listId,
+    _userId: req.user_id,
+  })
+    .then((list) => {
+      if (list) {
+        return true;
+      } else {
+        return false;
+      }
+    })
+    .then((canCreateTask) => {
+      if (canCreateTask) {
+        let newTask = new Task({
+          title: req.body.title,
+          _listId: req.params.listId,
+        });
 
-  newTask.save().then((newTask) => {
-    res.send(newTask);
-  });
+        newTask.save().then((newTask) => {
+          res.send(newTask);
+        });
+      } else {
+        res.sendStatus(404);
+      }
+    });
 });
 
 //UPDATE
 app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
-  const taskId = req.params.taskId;
-  const update = req.body;
-
-  Task.findById(taskId)
-    .then((taskToUpdate) => {
-      if (!taskToUpdate) {
-        return res.status(404).send("Task not found");
+  List.findOne({
+    _userId: req.user_id,
+    _id: req.params.listId,
+  })
+    .then((list) => {
+      if (list) {
+        return true;
+      } else {
+        return false;
       }
-      Object.assign(taskToUpdate, update);
-      return taskToUpdate.save();
     })
-    .then((updatedTask) => {
-      res.send(updatedTask);
+    .then((task) => {
+      if (task) {
+        Task.findOneAndUpdate(
+          {
+            _id: req.params.taskId,
+            _listId: req.params.listId,
+          },
+          { $set: req.body }
+        ).then(() => {
+          res.send("updated successfully");
+        });
+      } else {
+        res.sendStatus(404);
+      }
     });
 });
 
 //DELETE
-app.delete("/lists/:listId/tasks/:taskId", (req, res) => {
-  Task.deleteOne({ _id: req.params.taskId }).then((deletedTask) => {
-    res.send(deletedTask);
-  });
+app.delete("/lists/:listId/tasks/:taskId", authenticate, (req, res) => {
+  List.findOne({
+    _id: req.params.listId,
+    _userId: req.user_id,
+  })
+    .then((list) => {
+      if (list) {
+        return true;
+      }
+      return false;
+    })
+    .then((task) => {
+      if (task) {
+        Task.findOneAndDelete({
+          _id: req.params.taskId,
+          _listId: req.params.listId,
+        }).then((removedTaskDoc) => {
+          res.send(removedTaskDoc);
+          // won't send doc back => findOneAndDelete | findOneAndRemove
+          // this is respones:
+          //   {
+          //     "acknowledged": true,
+          //     "deletedCount": 1
+          // }
+        });
+      } else {
+        res.sendStatus(404);
+      }
+    });
 });
 
 //  USER ROUTES
@@ -264,15 +312,13 @@ app.post("/users/login", (req, res) => {
 
 //   GET ACCESS TOKEN
 app.get("/users/me/access-token", verifySession, (req, res) => {
-  req.userObject
-    .generateAccessAuthToken()
-    .then((accessToken) => {
-      res.header("x-access-token", accessToken);
-      res.send({ accessToken });
-    })
-    .catch((e) => {
-      res.status(400).send(e);
-    });
+  req.userObject.generateAccessAuthToken().then((accessToken) => {
+    res.header("x-access-token", accessToken);
+    res.send({ accessToken });
+  });
+  // .catch((e) => {
+  //   res.status(400).send(e);
+  // });
 });
 
 // HELPER METHODS
