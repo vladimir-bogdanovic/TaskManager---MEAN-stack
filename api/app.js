@@ -2,11 +2,16 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
+const jwt = require("jsonwebtoken");
+
 const mongoose = require("./db/mongoose");
+
+const jwtSecret = "51778657246321226641fsdklafjasdkljfsklfjd7148924065";
 
 // const { List, Task } = require("./db/models/index");
 const List = require("./db/models/list.model");
 const Task = require("./db/models/task.model");
+const { User } = require("./db/models/user.model");
 
 // enable cors
 app.use(function (req, res, next) {
@@ -17,20 +22,72 @@ app.use(function (req, res, next) {
   );
   res.header(
     "Access-Control-Allow-Headers",
-
     "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  res.header(
+    "Access-Control-Expose-Headers",
+    "x-access-token, x-refresh-token"
   );
   next();
 });
 
-// load middleware
-// app.use(bodyParser.json());
+//MIDLLEWARE;
 
-// LIST ROUTES
+let authenticate = (req, res, next) => {
+  let token = req.header("x-access-token");
+  jwt.verify(token, jwtSecret, (err, decoded) => {
+    if (err) {
+      res.status(401).send(err);
+    } else {
+      req.user_id = decoded._id;
+      console.log(decoded);
+      next();
+    }
+  });
+};
+
+let verifySession = (req, res, next) => {
+  let _id = req.header("_id");
+  let refreshToken = req.header("x-refresh-token");
+
+  User.findByIdAndToken(_id, refreshToken).then((user) => {
+    if (!user) {
+      return Promise.reject({
+        error:
+          "User not found. Make sure that the refresh token and user id are correct",
+      });
+    }
+
+    req.user_id = user._id;
+    req.userObject = user;
+    req.refreshToken = refreshToken;
+
+    user.sessions
+      .forEach((session) => {
+        if (
+          session.token === refreshToken &&
+          User.hasRefreshTokenExpired() === false
+        ) {
+          next();
+        } else {
+          return Promise.reject({
+            error: "Refresh token has expired or the session is invalid",
+          });
+        }
+      })
+      .catch((err) => {
+        res.status(401).send(err);
+      });
+  });
+};
+
+// LIST ROUTES  //////////////////////////////////////////////
 
 // GET
 app.get("/lists", (req, res) => {
-  List.find({})
+  List.find({
+    //   _userId: req.user_id,
+  })
     .then((lists) => {
       res.send(lists);
     })
@@ -85,20 +142,20 @@ app.patch("/lists/:id", (req, res) => {
 });
 
 //  DELETE
-app.delete("/lists/:id", (req, res) => {
-  const listId = req.params.id;
 
-  List.deleteOne({ _id: listId })
-    .then((deleteList) => {
-      res.send(deleteList);
-    })
-    .catch((error) => {
-      console.error("Error deleting list:", error);
-      res.status(500).send("An error occurred while deleting the list.");
-    });
+app.delete("/lists/:id", (req, res) => {
+  // We want to delete the specified list (document with id in the URL)
+  List.findOneAndDelete({
+    _id: req.params.id,
+  }).then((removedListDoc) => {
+    res.send(removedListDoc);
+
+    // delete all the tasks that are in the deleted list
+    deleteTasksFromList(removedListDoc._id);
+  });
 });
 
-// TASK ROUTES
+// TASK ROUTES  //////////////////////////////////////////////
 
 //GET
 app.get("/lists/:listId/tasks", (req, res) => {
@@ -147,6 +204,86 @@ app.delete("/lists/:listId/tasks/:taskId", (req, res) => {
     res.send(deletedTask);
   });
 });
+
+//  USER ROUTES
+
+// POST
+//signin
+app.post("/users", (req, res) => {
+  let body = req.body;
+  let newUser = new User(body);
+
+  newUser
+    .save()
+    .then(() => {
+      return newUser.createSession();
+    })
+    .then((refreshToken) => {
+      return newUser.generateAccessAuthToken().then((accessToken) => {
+        return { accessToken, refreshToken };
+      });
+    })
+    .then((authTokens) => {
+      res
+        .header("x-refresh-token", authTokens.refreshToken)
+        .header("x-access-token", authTokens.accessToken)
+        .send(newUser);
+    })
+    .catch((err) => {
+      res.send(err);
+    });
+});
+
+//POST
+//login
+
+app.post("/users/login", (req, res) => {
+  let email = req.body.email;
+  let password = req.body.password;
+
+  User.findByCredentials(email, password)
+    .then((user) => {
+      return user
+        .createSession()
+        .then((refreshToken) => {
+          return user.generateAccessAuthToken().then((accessToken) => {
+            return { accessToken, refreshToken };
+          });
+        })
+        .then((authTokens) => {
+          res
+            .header("x-refresh-token", authTokens.refreshToken)
+            .header("x-access-token", authTokens.accessToken)
+            .send(user);
+        });
+    })
+    .catch((e) => {
+      res.status(400).send(e);
+    });
+});
+
+//   GET ACCESS TOKEN
+app.get("/users/me/access-token", verifySession, (req, res) => {
+  req.userObject
+    .generateAccessAuthToken()
+    .then((accessToken) => {
+      res.header("x-access-token", accessToken);
+      res.send({ accessToken });
+    })
+    .catch((e) => {
+      res.status(400).send(e);
+    });
+});
+
+// HELPER METHODS
+
+let deleteTasksFromList = (_listId) => {
+  Task.deleteMany({
+    _listId,
+  }).then(() => {
+    console.log("Tasks from " + _listId + " were deleted!");
+  });
+};
 
 //LISTENING
 app.listen(3000, () => {

@@ -25,13 +25,6 @@
   padding: 42px;
 }
 
-.title {
-  font-family: "Lato";
-  font-size: 24px;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
 .lsit-menu {
   overflow-y: scroll;
   display: flex;
@@ -91,4 +84,11 @@
   bottom: 35px;
   border-radius: 50%;
   font-size: 24px;
+}
+
+.no-content-title {
+  color: #a6a4a4;
+  text-align: center;
+  font-size: 24px;
+  margin-top: 100px;
 }

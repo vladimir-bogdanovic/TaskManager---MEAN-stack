@@ -28,7 +28,7 @@ export class TaskService {
   }
 
   getLists(): Observable<ListInterface[]> {
-    return this.http.get<ListInterface[]>('http://localhost:3000/lists');
+    return this.http.get<ListInterface[]>(`${this.baseUrl}/lists`);
   }
 
   getTasks(listId: string): Observable<TaskInterface[]> {
@@ -41,6 +41,14 @@ export class TaskService {
     return this.http.patch<TaskInterface>(
       `${this.baseUrl}/lists/${task._listId}/tasks/${task._id}`,
       { completed: !task.completed }
+    );
+  }
+
+  login(email: string, password: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.baseUrl}/users/login`,
+      { email, password },
+      { observe: 'response' }
     );
   }
 }
