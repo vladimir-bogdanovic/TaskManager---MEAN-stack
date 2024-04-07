@@ -9,7 +9,7 @@ import { AuthService } from 'src/app/services/auth.service';
 export class LoginPageComponent {
   constructor(private authService: AuthService) {}
 
-  onClickButton(email: string, password: string) {
+  onClickLoginButton(email: string, password: string) {
     this.authService.login(email, password).subscribe((res) => {
       console.log(res);
       console.log('logged in');

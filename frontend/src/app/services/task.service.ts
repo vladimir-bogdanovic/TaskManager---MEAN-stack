@@ -44,6 +44,14 @@ export class TaskService {
     );
   }
 
+  signup(email: string, password: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.baseUrl}/users`,
+      { email, password },
+      { observe: 'response' }
+    );
+  }
+
   login(email: string, password: string): Observable<any> {
     return this.http.post<any>(
       `${this.baseUrl}/users/login`,
