@@ -73,28 +73,12 @@ export class AuthService {
     return localStorage.setItem('x-access-token', accessToken);
   }
 
-  getNewAccessToken1() {
-    return this.http
-      .get(`${this.taskService.baseUrl}/users/me/access-token`, {
-        headers: {
-          'x-refresh-token': this.getRefreshToken() as string,
-          "'_id'": this.getUserId() as string,
-        },
-        observe: 'response',
-      })
-      .pipe(
-        tap((res: HttpResponse<any>) => {
-          this.setAccessToken(res.headers.get('x-access-token') as string);
-        })
-      );
-  }
-
   getNewAccessToken() {
     return this.http
       .get(`${this.taskService.baseUrl}/users/me/access-token`, {
         headers: {
           'x-refresh-token': this.getRefreshToken() as string,
-          "'_id'": this.getUserId() as string,
+          _id: this.getUserId() as string,
         },
         observe: 'response',
       })

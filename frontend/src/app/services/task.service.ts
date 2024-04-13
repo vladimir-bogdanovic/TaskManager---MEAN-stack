@@ -44,6 +44,28 @@ export class TaskService {
     );
   }
 
+  deleteList(listId: string): Observable<ListInterface> {
+    return this.http.delete<ListInterface>(`${this.baseUrl}/lists/${listId}`);
+  }
+
+  editList(listName: string, listId: string): Observable<ListInterface> {
+    return this.http.patch<ListInterface>(`${this.baseUrl}/lists/${listId}`, {
+      title: listName,
+    });
+  }
+
+  deleteTask(listId: string, taskId: string): Observable<TaskInterface> {
+    return this.http.delete<TaskInterface>(
+      `${this.baseUrl}/lists/${listId}/tasks/${taskId}`
+    );
+  }
+
+  editTask(listId: string, taskid: string, taskName: string) {
+    return this.http.patch(`${this.baseUrl}/lists/${listId}/tasks/${taskid}`, {
+      title: taskName,
+    });
+  }
+
   signup(email: string, password: string): Observable<any> {
     return this.http.post<any>(
       `${this.baseUrl}/users`,

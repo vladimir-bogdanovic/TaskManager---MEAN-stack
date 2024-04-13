@@ -1,1 +1,6 @@
 @import "~@fortawesome/fontawesome-free/css/all.css";
+@import "../../main-style.scss";
+
+.linkToSignup {
+  color: $link-color;
+}

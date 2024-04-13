@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Params } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import { ListInterface } from 'src/app/models/list-model';
 import { TaskInterface } from 'src/app/models/task-model';
 import { TaskService } from 'src/app/services/task.service';
@@ -13,11 +13,14 @@ import { TaskService } from 'src/app/services/task.service';
 export class TaskViewComponent implements OnInit {
   lists!: ListInterface[];
   tasks!: TaskInterface[];
+  selectedListId!: string;
+  selectedTaskId!: string;
   test: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
-    private taskService: TaskService
+    private taskService: TaskService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -26,22 +29,55 @@ export class TaskViewComponent implements OnInit {
     });
     this.route.params.subscribe((params: Params) => {
       if (params?.['listId']) {
+        this.selectedListId = params?.['listId'];
         this.taskService
           .getTasks(params?.['listId'])
           .subscribe((tasks: TaskInterface[]) => {
             this.tasks = tasks;
+            tasks.find((taskId: TaskInterface) => {
+              this.selectedTaskId = taskId._id as string;
+            });
           });
       } else {
         this.tasks = undefined!;
-        console.log(this.tasks);
       }
     });
   }
 
   onTaskClick(task: TaskInterface) {
     this.taskService.completeTask(task).subscribe(() => {
+      console.log(task);
       console.log('task is complete');
       task.completed = !task.completed;
     });
+  }
+
+  onDeleteListClick() {
+    this.taskService.deleteList(this.selectedListId).subscribe(() => {
+      console.log('list is deleted successfully');
+      this.router.navigate(['/lists']);
+    });
+  }
+
+  onEditListClick() {
+    this.router.navigate([`/update/${this.selectedListId}`]);
+  }
+
+  onTaskDeleteClick() {
+    this.taskService
+      .deleteTask(this.selectedListId, this.selectedTaskId)
+      .subscribe((resData) => {
+        console.log(resData);
+        console.log('Task deleted successfully');
+        this.tasks = this.tasks.filter((value) => {
+          value._id !== this.selectedTaskId;
+        });
+      });
+  }
+
+  onTaskEditClick() {
+    this.router.navigate([
+      `lists/${this.selectedListId}/edit-task/${this.selectedTaskId}`,
+    ]);
   }
 }

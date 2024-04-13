@@ -7,7 +7,6 @@ import {
   HttpRequest,
 } from '@angular/common/http';
 import {
-  EMPTY,
   Observable,
   catchError,
   empty,
@@ -60,8 +59,8 @@ export class TaskInterceptor implements HttpInterceptor {
     this.refreshingAccessToken = true;
     return this.authService.getNewAccessToken().pipe(
       tap(() => {
-        this.refreshingAccessToken = false;
         console.log('access token refreshed');
+        this.refreshingAccessToken = false;
       })
     );
   }

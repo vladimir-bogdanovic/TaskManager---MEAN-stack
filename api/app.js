@@ -188,34 +188,85 @@ app.post("/lists/:listId/tasks", authenticate, (req, res) => {
 });
 
 //UPDATE
+// app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
+//   List.findOne({
+//     _userId: req.user_id,
+//     _id: req.params.listId,
+//   })
+//     .then((list) => {
+//       if (list) {
+//         return true;
+//       } else {
+//         return false;
+//       }
+//     })
+//     .then((task) => {
+//       if (task) {
+//         Task.findOneAndUpdate(
+//           {
+//             _id: req.params.taskId,
+//             _listId: req.params.listId,
+//           },
+//           { $set: req.body }
+//         ).then(() => {
+//           res.send("updated successfully");
+//         });
+//       } else {
+//         res.sendStatus(404);
+//       }
+//     });
+// });
+
 app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
-  List.findOne({
-    _userId: req.user_id,
-    _id: req.params.listId,
-  })
-    .then((list) => {
-      if (list) {
-        return true;
-      } else {
-        return false;
+  const taskId = req.params.taskId;
+  const update = req.body;
+
+  Task.findById(taskId)
+    .then((taskToUpdate) => {
+      if (!taskToUpdate) {
+        return res.status(404).send("Task not found");
       }
+      Object.assign(taskToUpdate, update);
+      return taskToUpdate.save();
     })
-    .then((task) => {
-      if (task) {
-        Task.findOneAndUpdate(
-          {
-            _id: req.params.taskId,
-            _listId: req.params.listId,
-          },
-          { $set: req.body }
-        ).then(() => {
-          res.send("updated successfully");
-        });
-      } else {
-        res.sendStatus(404);
-      }
+    .then((updatedTask) => {
+      res.send(updatedTask);
     });
 });
+
+// app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
+//   const taskId = req.params.taskId;
+//   const update = req.body;
+
+//   List.findOne({
+//     _userId: req.user_id,
+//     _id: req.params.listId,
+//   })
+//     .then((list) => {
+//       if (list) {
+//         return true;
+//       } else {
+//         return false;
+//       }
+//     })
+//     .then((task) => {
+//       if (task) {
+//         Task.findById(taskId)
+//           .then((taskToUpdate) => {
+//             if (!taskToUpdate) {
+//               return res.status(404).send("Task not found");
+//             }
+//             Object.assign(taskToUpdate, update);
+//             return taskToUpdate.save();
+//           })
+//           .then((updatedTask) => {
+//             res.send(updatedTask);
+//           });
+//       } else {
+//         res.sendStatus(404);
+//       }
+//     });
+// });
 
 //DELETE
 app.delete("/lists/:listId/tasks/:taskId", authenticate, (req, res) => {
