@@ -24,9 +24,6 @@ export class EditTaskComponent implements OnInit {
       this.listId = params?.['listId'];
       this.taskId = params?.['taskId'];
     });
-    console.log(this.listId);
-    console.log(this.taskId);
-    console.log('aaasd');
   }
 
   editTask() {

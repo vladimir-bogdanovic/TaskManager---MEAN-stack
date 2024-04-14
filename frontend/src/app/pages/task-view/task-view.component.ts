@@ -34,9 +34,6 @@ export class TaskViewComponent implements OnInit {
           .getTasks(params?.['listId'])
           .subscribe((tasks: TaskInterface[]) => {
             this.tasks = tasks;
-            tasks.find((taskId: TaskInterface) => {
-              this.selectedTaskId = taskId._id as string;
-            });
           });
       } else {
         this.tasks = undefined!;
@@ -44,13 +41,13 @@ export class TaskViewComponent implements OnInit {
     });
   }
 
-  onTaskClick(task: TaskInterface) {
-    this.taskService.completeTask(task).subscribe(() => {
-      console.log(task);
-      console.log('task is complete');
-      task.completed = !task.completed;
-    });
-  }
+  // onTaskClick(task: TaskInterface) {
+  //   this.taskService.completeTask(task).subscribe(() => {
+  //     console.log(task);
+  //     console.log('task is complete');
+  //     task.completed = !task.completed;
+  //   });
+  // }
 
   onDeleteListClick() {
     this.taskService.deleteList(this.selectedListId).subscribe(() => {
@@ -60,24 +57,23 @@ export class TaskViewComponent implements OnInit {
   }
 
   onEditListClick() {
-    this.router.navigate([`/update/${this.selectedListId}`]);
+    this.router.navigate([`/edit-list/${this.selectedListId}`]);
   }
 
-  onTaskDeleteClick() {
-    this.taskService
-      .deleteTask(this.selectedListId, this.selectedTaskId)
-      .subscribe((resData) => {
-        console.log(resData);
-        console.log('Task deleted successfully');
-        this.tasks = this.tasks.filter((value) => {
-          value._id !== this.selectedTaskId;
-        });
+  onTaskDeleteClick(task: TaskInterface) {
+    const taskId = task._id as string;
+    console.log(taskId);
+    this.taskService.deleteTask(this.selectedListId, taskId).subscribe(() => {
+      console.log('Task deleted successfully');
+      this.tasks = this.tasks.filter((value) => {
+        value._id !== this.selectedTaskId;
       });
+    });
   }
 
-  onTaskEditClick() {
+  onTaskEditClick(task: TaskInterface) {
     this.router.navigate([
-      `lists/${this.selectedListId}/edit-task/${this.selectedTaskId}`,
+      `lists/${this.selectedListId}/edit-task/${task._id}`,
     ]);
   }
 }

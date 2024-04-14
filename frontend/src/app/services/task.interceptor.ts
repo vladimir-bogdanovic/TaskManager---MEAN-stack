@@ -8,6 +8,7 @@ import {
 } from '@angular/common/http';
 import {
   Observable,
+  Subject,
   catchError,
   empty,
   switchMap,
@@ -35,7 +36,6 @@ export class TaskInterceptor implements HttpInterceptor {
         console.log(error);
 
         if (error.status === 401 && !this.refreshingAccessToken) {
-          console.log('token refreshed');
           return this.refreshAccessToken().pipe(
             switchMap(() => {
               req = this.addAuthHeader(req);
@@ -56,7 +56,7 @@ export class TaskInterceptor implements HttpInterceptor {
   }
 
   refreshAccessToken() {
-    this.refreshingAccessToken = true;
+    // this.refreshingAccessToken = true;
     return this.authService.getNewAccessToken().pipe(
       tap(() => {
         console.log('access token refreshed');

@@ -187,7 +187,7 @@ app.post("/lists/:listId/tasks", authenticate, (req, res) => {
     });
 });
 
-//UPDATE
+// UPDATE
 // app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
 //   List.findOne({
 //     _userId: req.user_id,
@@ -234,39 +234,39 @@ app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
     });
 });
 
-// app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
-//   const taskId = req.params.taskId;
-//   const update = req.body;
+app.patch("/lists/:listId/tasks/:taskId", (req, res) => {
+  const taskId = req.params.taskId;
+  const update = req.body;
 
-//   List.findOne({
-//     _userId: req.user_id,
-//     _id: req.params.listId,
-//   })
-//     .then((list) => {
-//       if (list) {
-//         return true;
-//       } else {
-//         return false;
-//       }
-//     })
-//     .then((task) => {
-//       if (task) {
-//         Task.findById(taskId)
-//           .then((taskToUpdate) => {
-//             if (!taskToUpdate) {
-//               return res.status(404).send("Task not found");
-//             }
-//             Object.assign(taskToUpdate, update);
-//             return taskToUpdate.save();
-//           })
-//           .then((updatedTask) => {
-//             res.send(updatedTask);
-//           });
-//       } else {
-//         res.sendStatus(404);
-//       }
-//     });
-// });
+  List.findOne({
+    _userId: req.user_id,
+    _id: req.params.listId,
+  })
+    .then((list) => {
+      if (list) {
+        return true;
+      } else {
+        return false;
+      }
+    })
+    .then((task) => {
+      if (task) {
+        Task.findById(taskId)
+          .then((taskToUpdate) => {
+            if (!taskToUpdate) {
+              return res.status(404).send("Task not found");
+            }
+            Object.assign(taskToUpdate, update);
+            return taskToUpdate.save();
+          })
+          .then((updatedTask) => {
+            res.send(updatedTask);
+          });
+      } else {
+        res.sendStatus(404);
+      }
+    });
+});
 
 //DELETE
 app.delete("/lists/:listId/tasks/:taskId", authenticate, (req, res) => {

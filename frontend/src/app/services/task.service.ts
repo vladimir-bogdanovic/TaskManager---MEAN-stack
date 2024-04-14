@@ -60,10 +60,17 @@ export class TaskService {
     );
   }
 
-  editTask(listId: string, taskid: string, taskName: string) {
-    return this.http.patch(`${this.baseUrl}/lists/${listId}/tasks/${taskid}`, {
-      title: taskName,
-    });
+  editTask(
+    listId: string,
+    taskid: string,
+    taskName: string
+  ): Observable<TaskInterface> {
+    return this.http.patch<TaskInterface>(
+      `${this.baseUrl}/lists/${listId}/tasks/${taskid}`,
+      {
+        title: taskName,
+      }
+    );
   }
 
   signup(email: string, password: string): Observable<any> {
